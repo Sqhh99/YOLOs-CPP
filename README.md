@@ -129,8 +129,10 @@ cd YOLOs-CPP
 ./build.sh 1.20.1 1   # GPU build (requires CUDA)
 
 # Run
-./build/image_inference models/yolo11n.onnx data/dog.jpg
+./build/image_inference models/yolo11n.onnx data/dog.jpg models/coco.names 0
 ```
+
+On Windows, `build.bat gpu` auto-selects CUDA 13 or CUDA 12 ONNX Runtime 1.26.0 packages. Use `build.bat gpu13` for CUDA 13.x or `build.bat gpu12` for CUDA 12.x explicitly. CUDA Toolkit and cuDNN are separate installs; GPU inference still requires `cudnn64_9.dll` on `PATH` or next to the executable.
 
 <details>
 <summary><strong>📦 Manual CMake Build</strong></summary>

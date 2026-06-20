@@ -27,7 +27,7 @@ All steps, from installation to testing, were executed and verified on Windows 1
 - C++17 compatible compiler
 - CMake (version 3.10 or higher)
 - OpenCV (version 4.5.5 or higher)
-- ONNX Runtime (version 1.16.3 or 1.19.2 recommended, with optional GPU support)
+- ONNX Runtime (version 1.26.0 recommended for Windows GPU builds with CUDA 13/12 support)
 - Python Version 3.8+ with `onnxruntime` and `ultralytics` packages.
 - Git for cloning the repository
 
@@ -112,7 +112,10 @@ All steps were performed by the project owner on Windows 11 (x64).
 
 2. **Install ONNX Runtime**:
    - Open [https://github.com/microsoft/onnxruntime/releases](https://github.com/microsoft/onnxruntime/releases).
-   - Download the Windows x64 ZIP (e.g., `onnxruntime-win-x64-gpu-1.16.3.zip` for GPU support).
+   - Download the Windows x64 ZIP:
+     - CPU: `onnxruntime-win-x64-1.26.0.zip`
+     - CUDA 13 GPU: `onnxruntime-win-x64-gpu_cuda13-1.26.0.zip`
+     - CUDA 12 GPU: `onnxruntime-win-x64-gpu-1.26.0.zip`
    - Extract to `C:\onnxruntime`.
    - Copy the following DLLs from `C:\onnxruntime\lib` to `C:\Users\DELL\source\repos\YOLOs-CPP\build\Release` (after building):
      - `onnxruntime.dll`
@@ -128,6 +131,9 @@ All steps were performed by the project owner on Windows 11 (x64).
        ```
      - Click **OK** to save.
    - Restart PowerShell or CMD.
+   - For GPU builds, the ONNX Runtime CUDA package must match the CUDA Toolkit major version. CUDA Toolkit and cuDNN are separate installs.
+     - CUDA 13 package requires `cudart64_13.dll`, `cublas64_13.dll`, `cublasLt64_13.dll`, `cufft64_12.dll`, and `cudnn64_9.dll`.
+     - CUDA 12 package requires `cudart64_12.dll`, `cublas64_12.dll`, `cublasLt64_12.dll`, `cufft64_11.dll`, and `cudnn64_9.dll`.
 
 #### Clone the Repository
    - Open PowerShell or CMD.
@@ -201,12 +207,16 @@ All steps were performed by the project owner on Windows 11 (x64).
 ## Usage Instructions
 All commands were tested successfully by the project owner on Windows 11 (x64). Ensure model files, label files, and input files are in the specified paths.
 
+`image_inference.exe` accepts `model_path image_path_or_folder labels_path use_gpu`. The `use_gpu` argument is optional and defaults to `1`; pass `0` to force CPU inference.
+
+For Windows builds, use `build.bat gpu` to auto-detect CUDA 13/12, `build.bat gpu13` for CUDA 13, or `build.bat gpu12` for CUDA 12.
+
 ### Object Detection (Quantized Model)
 Uses `yolo11n_uint8.onnx` for faster CPU inference.
 - **Image Inference**:
   ```powershell
   cd C:\Users\DELL\source\repos\YOLOs-CPP\build
-  .\Release\image_inference.exe C:\Users\DELL\source\repos\YOLOs-CPP\data\dog.jpg
+  .\Release\image_inference.exe ..\yolo11n.onnx ..\data\dog.jpg ..\models\coco.names 0
   ```
   - Output: `output_dog.jpg` with bounding boxes.
 - **Video Inference**:
@@ -457,8 +467,15 @@ The project owner made the following changes:
 - **No poses detected**:
   - Use inputs with persons (e.g., `person.jpg`, `test_pose.mp4`) for pose estimation.
 - **DLL errors**:
-  - Ensure all DLLs (`opencv_*.dll`, `onnxruntime*.dll`) are in `C:\Users\DELL\source\repos\YOLOs-CPP\build\Release`.
-  - Verify that `C:\opencv\build\x64\vc16\bin` and `C:\onnxruntime\lib` are in the system PATH.
+   - Ensure all DLLs (`opencv_*.dll`, `onnxruntime*.dll`) are in `C:\Users\DELL\source\repos\YOLOs-CPP\build\Release`.
+   - Verify that `C:\opencv\build\x64\vc16\bin` and `C:\onnxruntime\lib` are in the system PATH.
+   - If GPU inference exits immediately or reports missing CUDA dependencies, make sure the selected ONNX Runtime package matches the installed CUDA major version.
+   - For CUDA 13 builds, make `cudart64_13.dll`, `cublas64_13.dll`, `cublasLt64_13.dll`, `cufft64_12.dll`, and `cudnn64_9.dll` discoverable.
+   - For CUDA 12 builds, make `cudart64_12.dll`, `cublas64_12.dll`, `cublasLt64_12.dll`, `cufft64_11.dll`, and `cudnn64_9.dll` discoverable.
+   - To run detection on CPU without changing code, pass `0` as the fourth argument:
+     ```powershell
+     .\Release\image_inference.exe ..\models\yolo11n.onnx ..\data\dog.jpg ..\models\coco.names 0
+     ```
 - **CMake errors**:
   - Ensure `OpenCV_DIR` and `ONNXRUNTIME_DIR` are correctly set in the CMake command.
   - If `std::filesystem` errors occur, update `CMakeLists.txt` to use C++17 (see [Building the Project](#building-the-project)).
@@ -470,7 +487,7 @@ The project owner made the following changes:
     ```
 
 ## Notes
-- All models were tested on CPU (`isGPU = false`) for compatibility. Enable GPU by setting `isGPU = true` if supported hardware is available (include `onnxruntime_providers_cuda.dll` and `onnxruntime_providers_tensorrt.dll`).
+- All models were tested on CPU for compatibility. For `image_inference.exe`, pass `0` as the fourth argument for CPU or `1` for GPU. GPU mode requires the ONNX Runtime provider DLLs plus CUDA/cuDNN runtime DLLs matching the selected CUDA ABI.
 - Quantized models (`yolo11n_uint8.onnx`) provide faster inference with minimal accuracy loss.
 - OBB requires `Dota.names` for correct class labeling.
 - Pose estimation requires inputs with persons to detect keypoints and skeletons.

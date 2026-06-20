@@ -16,6 +16,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # ============================================================================
 option(BUILD_EXAMPLES "Build example applications" OFF)
 option(ENABLE_WARNINGS "Enable compiler warnings" ON)
+set(YOLOS_ORT_CUDA_MAJOR "0" CACHE STRING "ONNX Runtime CUDA major version: 0, 12, or 13")
+set_property(CACHE YOLOS_ORT_CUDA_MAJOR PROPERTY STRINGS 0 12 13)
+
+set(_YOLOS_VALID_CUDA_MAJORS 0 12 13)
+if(NOT YOLOS_ORT_CUDA_MAJOR IN_LIST _YOLOS_VALID_CUDA_MAJORS)
+    message(FATAL_ERROR "YOLOS_ORT_CUDA_MAJOR must be one of: 0, 12, 13")
+endif()
 
 # ============================================================================
 # ONNX Runtime
@@ -24,6 +31,9 @@ if(NOT DEFINED ONNXRUNTIME_DIR)
     # Try to find ONNX Runtime in common locations (platform-specific)
     if(WIN32)
         set(ONNXRUNTIME_SEARCH_PATHS
+            "${CMAKE_SOURCE_DIR}/onnxruntime-win-x64-gpu_cuda13-1.26.0"
+            "${CMAKE_SOURCE_DIR}/onnxruntime-win-x64-gpu-1.26.0"
+            "${CMAKE_SOURCE_DIR}/onnxruntime-win-x64-1.26.0"
             "${CMAKE_SOURCE_DIR}/onnxruntime-win-x64-1.20.1"
             "${CMAKE_SOURCE_DIR}/onnxruntime-win-x64-gpu-1.20.1"
             "${CMAKE_SOURCE_DIR}/onnxruntime"
@@ -128,6 +138,7 @@ endif()
 function(add_yolo_executable name source)
     add_executable(${name} ${source})
     target_include_directories(${name} PRIVATE "${ONNXRUNTIME_DIR}/include")
+    target_compile_definitions(${name} PRIVATE YOLOS_ORT_CUDA_MAJOR=${YOLOS_ORT_CUDA_MAJOR})
     target_link_libraries(${name} PRIVATE 
         ${OpenCV_LIBS}
         ${ONNXRUNTIME_LIB}
@@ -145,6 +156,19 @@ function(add_yolo_executable name source)
                 "$<TARGET_FILE_DIR:${name}>"
             )
         endif()
+        foreach(ONNXRUNTIME_PROVIDER_DLL
+                onnxruntime_providers_shared.dll
+                onnxruntime_providers_cuda.dll
+                onnxruntime_providers_tensorrt.dll)
+            set(ONNXRUNTIME_PROVIDER_DLL_PATH "${ONNXRUNTIME_DIR}/lib/${ONNXRUNTIME_PROVIDER_DLL}")
+            if(EXISTS "${ONNXRUNTIME_PROVIDER_DLL_PATH}")
+                add_custom_command(TARGET ${name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${ONNXRUNTIME_PROVIDER_DLL_PATH}"
+                    "$<TARGET_FILE_DIR:${name}>"
+                )
+            endif()
+        endforeach()
     elseif(UNIX AND NOT APPLE)
         # Set RPATH for runtime library discovery
         set_target_properties(${name} PROPERTIES
@@ -190,5 +214,6 @@ message(STATUS "  Build Type:    ${CMAKE_BUILD_TYPE}")
 message(STATUS "  C++ Standard:  ${CMAKE_CXX_STANDARD}")
 message(STATUS "  OpenCV:        ${OpenCV_VERSION}")
 message(STATUS "  ONNX Runtime:  ${ONNXRUNTIME_DIR}")
+message(STATUS "  ORT CUDA ABI:  ${YOLOS_ORT_CUDA_MAJOR}")
 message(STATUS "  Examples:      ${BUILD_EXAMPLES}")
 message(STATUS "")

@@ -19,8 +19,10 @@ This guide covers system requirements, build options, and troubleshooting for YO
 | Component | Requirement |
 |-----------|-------------|
 | **NVIDIA GPU** | Compute Capability 5.0+ |
-| **CUDA Toolkit** | 11.0 or higher |
-| **cuDNN** | 8.0+ (recommended) |
+| **CUDA Toolkit** | Version compatible with your ONNX Runtime package |
+| **cuDNN** | Version compatible with your ONNX Runtime package |
+
+For Windows GPU builds, the selected ONNX Runtime package must match the CUDA runtime ABI. `build.bat gpu13` uses the CUDA 13 package, `build.bat gpu12` uses the CUDA 12 package, and `build.bat gpu` auto-detects CUDA 13 first. CUDA Toolkit and cuDNN are separate installs; both CUDA 12 and CUDA 13 ONNX Runtime packages require cuDNN 9 (`cudnn64_9.dll`) at runtime.
 
 ## Quick Install
 
@@ -147,6 +149,10 @@ See [Windows Setup Guide](../YOLOs-CPP_on_Windows_11.md).
 # GPU build (requires CUDA)
 .\build.ps1 -GPU
 
+# Explicit CUDA ABI builds
+.\build.ps1 -GPU13
+.\build.ps1 -GPU12
+
 # Clean build
 .\build.ps1 -Clean
 ```
@@ -155,23 +161,30 @@ See [Windows Setup Guide](../YOLOs-CPP_on_Windows_11.md).
 
 ```cmd
 build.bat          # CPU build
-build.bat gpu      # GPU build
+build.bat gpu      # GPU build, auto-detect CUDA 13/12
+build.bat gpu13    # GPU build with ONNX Runtime CUDA 13 package
+build.bat gpu12    # GPU build with ONNX Runtime CUDA 12 package
 ```
+
+`build.bat gpu` downloads and links the matching ONNX Runtime GPU package, but it does not install CUDA or cuDNN. For CUDA 13, install CUDA 13.x plus cuDNN 9.x; for CUDA 12, install CUDA 12.x plus cuDNN 9.x. Add the CUDA/cuDNN `bin` directories to `PATH` or copy the required DLLs to `build\Release`.
 
 ### Option 3: Manual Build
 
 ```powershell
 # Download ONNX Runtime
-Invoke-WebRequest -Uri "https://github.com/microsoft/onnxruntime/releases/download/v1.20.1/onnxruntime-win-x64-1.20.1.zip" -OutFile "ort.zip"
+Invoke-WebRequest -Uri "https://github.com/microsoft/onnxruntime/releases/download/v1.26.0/onnxruntime-win-x64-1.26.0.zip" -OutFile "ort.zip"
 Expand-Archive -Path "ort.zip" -DestinationPath "."
 
 # Build
 mkdir build; cd build
-cmake .. -DONNXRUNTIME_DIR="..\onnxruntime-win-x64-1.20.1"
+cmake .. -DONNXRUNTIME_DIR="..\onnxruntime-win-x64-1.26.0" -DYOLOS_ORT_CUDA_MAJOR=0
 cmake --build . --config Release
 
-# Run
-.\Release\image_inference.exe ..\models\yolo11n.onnx ..\data\dog.jpg
+# Run on GPU by default
+.\Release\image_inference.exe ..\models\yolo11n.onnx ..\data\dog.jpg ..\models\coco.names 1
+
+# Run on CPU fallback
+.\Release\image_inference.exe ..\models\yolo11n.onnx ..\data\dog.jpg ..\models\coco.names 0
 ```
 
 ### Setting up OpenCV on Windows

@@ -14,13 +14,25 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 #include "yolos/core/onnx_metadata.hpp"
 #include "yolos/core/utils.hpp"
 #include "yolos/core/version.hpp"
+
+#ifndef YOLOS_ORT_CUDA_MAJOR
+#define YOLOS_ORT_CUDA_MAJOR 0
+#endif
 
 namespace yolos {
 
@@ -130,6 +142,92 @@ protected:
     }
 
 private:
+#ifdef _WIN32
+    static bool isDllDiscoverable(const std::string& dllName) {
+        return SearchPathA(nullptr, dllName.c_str(), nullptr, 0, nullptr, nullptr) > 0;
+    }
+
+    static std::vector<std::string> getRequiredCudaRuntimeDlls() {
+#if YOLOS_ORT_CUDA_MAJOR == 13
+        return {
+            "cudart64_13.dll",
+            "cublas64_13.dll",
+            "cublasLt64_13.dll",
+            "cufft64_12.dll",
+            "cudnn64_9.dll"
+        };
+#elif YOLOS_ORT_CUDA_MAJOR == 12
+        return {
+            "cudart64_12.dll",
+            "cublas64_12.dll",
+            "cublasLt64_12.dll",
+            "cufft64_11.dll",
+            "cudnn64_9.dll"
+        };
+#else
+        return {};
+#endif
+    }
+
+    static void validateCudaRuntimeDependencies() {
+        const std::vector<std::string> providerDlls = {
+            "onnxruntime_providers_shared.dll",
+            "onnxruntime_providers_cuda.dll"
+        };
+        const std::vector<std::string> cudaDlls = getRequiredCudaRuntimeDlls();
+
+        std::vector<std::string> missingProviderDlls;
+        for (const auto& dll : providerDlls) {
+            if (!isDllDiscoverable(dll)) {
+                missingProviderDlls.push_back(dll);
+            }
+        }
+
+        std::vector<std::string> missingCudaDlls;
+        for (const auto& dll : cudaDlls) {
+            if (!isDllDiscoverable(dll)) {
+                missingCudaDlls.push_back(dll);
+            }
+        }
+
+        if (missingProviderDlls.empty() && missingCudaDlls.empty()) {
+            return;
+        }
+
+        std::string message = "GPU inference was requested, but required ONNX Runtime CUDA provider dependencies";
+#if YOLOS_ORT_CUDA_MAJOR == 13
+        message += " for CUDA 13.x";
+#elif YOLOS_ORT_CUDA_MAJOR == 12
+        message += " for CUDA 12.x";
+#endif
+        message += " were not found.\n";
+
+        if (!missingProviderDlls.empty()) {
+            message += "Missing ONNX Runtime provider DLLs:\n";
+            for (const auto& dll : missingProviderDlls) {
+                message += "  - " + dll + "\n";
+            }
+        }
+
+        if (!missingCudaDlls.empty()) {
+            message += "Missing CUDA/cuDNN DLLs:\n";
+            for (const auto& dll : missingCudaDlls) {
+                message += "  - " + dll + "\n";
+            }
+        }
+
+#if YOLOS_ORT_CUDA_MAJOR == 13
+        message += "Install CUDA 13.x and cuDNN 9.x, then add their bin directories to PATH or copy the DLLs next to the executable.";
+#elif YOLOS_ORT_CUDA_MAJOR == 12
+        message += "Install CUDA 12.x and cuDNN 9.x, then add their bin directories to PATH or copy the DLLs next to the executable.";
+#else
+        message += "Set YOLOS_ORT_CUDA_MAJOR to 12 or 13 when building GPU binaries, or run with CPU inference.";
+#endif
+
+        throw std::runtime_error(message);
+    }
+#endif
+
     void initSession(const std::string& modelPath, bool useGPU, int numThreads) {
         sessionOptions_ = Ort::SessionOptions();
 
@@ -137,6 +235,12 @@ private:
         int threads = (numThreads > 0) ? numThreads : std::min(6, static_cast<int>(std::thread::hardware_concurrency()));
         sessionOptions_.SetIntraOpNumThreads(threads);
         sessionOptions_.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+
+#ifdef _WIN32
+        if (useGPU) {
+            validateCudaRuntimeDependencies();
+        }
+#endif
 
         // Configure execution provider
         std::vector<std::string> availableProviders = Ort::GetAvailableProviders();

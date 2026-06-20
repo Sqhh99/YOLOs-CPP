@@ -38,11 +38,14 @@
 
 // Include necessary headers
 #include <opencv2/highgui/highgui.hpp>
+#include <algorithm> // Required for std::transform
+#include <chrono>
+#include <cctype>
+#include <exception>
+#include <filesystem>
 #include <iostream>
 #include <string>
-#include <chrono>
-#include <filesystem>
-#include <algorithm> // Required for std::transform
+#include <vector>
 
 
 // #ifndef DEBUG_MODE
@@ -55,6 +58,35 @@
 
 using namespace yolos::det;
 
+namespace {
+
+void printUsage(const char* programName) {
+    std::cout << "Usage: " << programName
+              << " [model_path] [image_path_or_folder] [labels_path] [use_gpu]\n"
+              << "  use_gpu: 1/gpu/cuda/true or 0/cpu/false (default: 1)" << std::endl;
+}
+
+std::string toLower(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return value;
+}
+
+bool parseGpuFlag(const std::string& value, bool& useGPU) {
+    const std::string normalized = toLower(value);
+    if (normalized == "1" || normalized == "true" || normalized == "gpu" || normalized == "cuda") {
+        useGPU = true;
+        return true;
+    }
+    if (normalized == "0" || normalized == "false" || normalized == "cpu") {
+        useGPU = false;
+        return true;
+    }
+    return false;
+}
+
+} // namespace
+
 
 int main(int argc, char* argv[]){
     namespace fs = std::filesystem;
@@ -62,6 +94,7 @@ int main(int argc, char* argv[]){
     std::string labelsPath = "../models/coco.names";
     std::string imagePath = "../data/dog.jpg";           // Default image path
     std::string modelPath = "../models/yolo11n.onnx";
+    bool isGPU = true; // Set to false for CPU processing
     std::vector<std::string> imageFiles;
 
     if(argc > 1){
@@ -92,46 +125,66 @@ int main(int argc, char* argv[]){
             return -1;
         }
     } else {
-        std::cout << "Usage: " << argv[0] << " <image_path_or_folder>\n";
+        printUsage(argv[0]);
         std::cout << "No image path provided. Using default: " << imagePath << std::endl;
         imageFiles.push_back(imagePath);
     }
     if (argc > 3){
         labelsPath = argv[3];
     }
-    // Initialize the YOLO detector with the chosen model and labels
-    bool isGPU = true; // Set to false for CPU processing
-    // YOLO10Detector detector(modelPath, labelsPath, isGPU);
-    YOLODetector detector(modelPath, labelsPath, isGPU);
-    for (const auto& imgPath : imageFiles) {
-        std::cout << "\nProcessing: " << imgPath << std::endl;
-        // Load an image
-        cv::Mat image = cv::imread(imgPath);
-        if (image.empty()) {
-            std::cerr << "Error: Could not open or find the image!\n";
-            continue;
-        }
-        // Detect objects in the image and measure execution time
-        auto start = std::chrono::high_resolution_clock::now();
-        std::vector<Detection> results = detector.detect(image);
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            std::chrono::high_resolution_clock::now() - start);
-        std::cout << "Detection completed in: " << duration.count() << " ms" << std::endl;
-        std::cout << "Number of detections found: " << results.size() << std::endl;
-        // Print details of each detection
-        for (size_t i = 0; i < results.size(); ++i) {
-            std::cout << "Detection " << i << ": Class=" << results[i].classId 
-                      << ", Confidence=" << results[i].conf 
-                      << ", Box=(" << results[i].box.x << "," << results[i].box.y 
-                      << "," << results[i].box.width << "," << results[i].box.height << ")" << std::endl;
-        }
+    if (argc > 4 && !parseGpuFlag(argv[4], isGPU)) {
+        std::cerr << "Invalid use_gpu value: " << argv[4] << std::endl;
+        printUsage(argv[0]);
+        return -1;
+    }
 
-        // Draw bounding boxes on the image
-        detector.drawDetections(image, results); // simple bbox drawing
-        // detector.drawDetectionsWithMask(image, results); // Uncomment for mask drawing
-        // Display the image
-        cv::imshow("Detections", image);
-        cv::waitKey(0); // Wait for a key press to close the window
+    try {
+        // Initialize the YOLO detector with the chosen model and labels
+        // YOLO10Detector detector(modelPath, labelsPath, isGPU);
+        YOLODetector detector(modelPath, labelsPath, isGPU);
+        for (const auto& imgPath : imageFiles) {
+            std::cout << "\nProcessing: " << imgPath << std::endl;
+            // Load an image
+            cv::Mat image = cv::imread(imgPath);
+            if (image.empty()) {
+                std::cerr << "Error: Could not open or find the image!\n";
+                continue;
+            }
+            // Detect objects in the image and measure execution time
+            auto start = std::chrono::high_resolution_clock::now();
+            std::vector<Detection> results = detector.detect(image);
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::high_resolution_clock::now() - start);
+            std::cout << "Detection completed in: " << duration.count() << " ms" << std::endl;
+            std::cout << "Number of detections found: " << results.size() << std::endl;
+            // Print details of each detection
+            for (size_t i = 0; i < results.size(); ++i) {
+                std::cout << "Detection " << i << ": Class=" << results[i].classId 
+                          << ", Confidence=" << results[i].conf 
+                          << ", Box=(" << results[i].box.x << "," << results[i].box.y 
+                          << "," << results[i].box.width << "," << results[i].box.height << ")" << std::endl;
+            }
+
+            // Draw bounding boxes on the image
+            detector.drawDetections(image, results); // simple bbox drawing
+            // detector.drawDetectionsWithMask(image, results); // Uncomment for mask drawing
+            // Display the image
+            cv::imshow("Detections", image);
+            cv::waitKey(0); // Wait for a key press to close the window
+        }
+    } catch (const Ort::Exception& e) {
+        std::cerr << "ONNX Runtime error: " << e.what() << std::endl;
+        if (isGPU) {
+            std::cerr << "GPU inference was requested. Verify CUDA/cuDNN runtime compatibility "
+                      << "or retry with use_gpu=0 for CPU inference." << std::endl;
+        }
+        return -1;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return -1;
+    } catch (...) {
+        std::cerr << "Unknown error during image inference." << std::endl;
+        return -1;
     }
     return 0;
 }
