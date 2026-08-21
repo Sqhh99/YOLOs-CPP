@@ -43,8 +43,8 @@ cd tests && ./test_all.sh
 
 - **C++17** standard
 - **4 spaces** for indentation (no tabs)
-- **snake_case** for variables and functions
-- **PascalCase** for classes and types
+- **camelCase** for variables and functions (`detect`, `confThreshold`)
+- **PascalCase** for classes and types (`YOLODetector`, `BoundingBox`)
 - Max line length: **100 characters**
 
 ### Documentation
@@ -63,7 +63,7 @@ cd tests && ./test_all.sh
 /// @return Vector of detections
 [[nodiscard]] std::vector<Detection> detect(
     const cv::Mat& image,
-    float confThreshold = 0.25f,
+    float confThreshold = 0.4f,
     float iouThreshold = 0.45f
 );
 ```

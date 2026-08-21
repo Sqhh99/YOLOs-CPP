@@ -176,8 +176,8 @@ cd tests
 ## Code Style
 
 - **C++17** standard
-- **snake_case** for variables and functions
-- **PascalCase** for classes and types
+- **camelCase** for variables and functions (`detect`, `confThreshold`)
+- **PascalCase** for classes and types (`YOLODetector`, `BoundingBox`)
 - **UPPER_CASE** for constants
 - Use `const` and `[[nodiscard]]` where appropriate
 
