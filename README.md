@@ -30,23 +30,24 @@
 
 ## 📰 Latest News
 
-* **[2026.08.02]** v1.1.0 released — depth estimation, batch inference, in-memory models, and Ultralytics parity fixes. [Release notes](https://github.com/Geekgineer/YOLOs-CPP/releases/tag/v1.1.0)
-* **[2026.08.02]** Monocular metric depth estimation for YOLO26 — `yolos::depth::YOLODepthEstimator`, `image_depth_inference`.
-* **[2026.08.02]** Batch inference (`batchDetect` / `batchSegment` / `batchClassify`) and in-memory model loading on every task.
-* **[2026.04.11]** [YOLOE](https://arxiv.org/abs/2503.07465) open-vocabulary detection and segmentation in C++ — see [Model Guide](docs/guides/models.md#yoloe-open-vocabulary-detection-segmentation), `image_yoloe_seg` / `video_yoloe_seg`.
-* **[2026.01.22]** YOLOs-CPP-TensorRT released achive 530+ fps using NVIDIA GPUs and Jetson Boards. [YOLOs-CPP-TensorRT](https://github.com/Geekgineer/YOLOs-CPP-TensorRT)
-* **[2026.01.22]** CPP Implementation of popular MOT trackers released. [motcpp](https://github.com/Geekgineer/motcpp)
-* **[2026.01.22]** ROS 2 integration released. [ros2_yolos_cpp](https://github.com/Geekgineer/ros2_yolos_cpp)
-* **[2026.01.18]** Production-ready v1.0.0 released. [Watch video](https://www.youtube.com/watch?v=Ax5vaYJ-mVQ)
-* **[2025.05.15]** Classification support added.
-* **[2025.04.04]** [Depths-CPP](https://github.com/Geekgineer/Depths-CPP) - New project for real-time metric depth estimation.
-* **[2025.03.16]** Pose estimation support added.
-* **[2025.02.19]** YOLOv12 support for object detection.
-* **[2025.02.11]** Oriented bounding box (OBB) format support added.
-* **[2025.01.29]** YOLOv9 support for object detection.
-* **[2025.01.26]** Segmentation support for YOLOv9.
-* **[2025.01.26]** Segmentation support for YOLOv8 and YOLOv11 with quantized models.
-* **[2024.10.23]** Initial release v0.0.1 with object detection support.
+* **[2026.08.23]** Released [ros2_yolos_trt](https://github.com/Geekgineer/ros2_yolos_trt), a ROS 2 TensorRT inference package achieving **sub-2 ms inference latency**.
+* **[2026.08.02]** Released **v1.1.0** with depth estimation, batch inference, in-memory model loading, and Ultralytics parity improvements. See the [release notes](https://github.com/Geekgineer/YOLOs-CPP/releases/tag/v1.1.0).
+* **[2026.08.02]** Added monocular metric depth estimation for YOLO26 via `yolos::depth::YOLODepthEstimator` and the `image_depth_inference` example.
+* **[2026.08.02]** Added batch inference with `batchDetect`, `batchSegment`, and `batchClassify`, plus in-memory model loading across all supported tasks.
+* **[2026.04.11]** Added [YOLOE](https://arxiv.org/abs/2503.07465) open-vocabulary detection and segmentation in C++. See the [Model Guide](docs/guides/models.md#yoloe-open-vocabulary-detection-segmentation) and the `image_yoloe_seg` / `video_yoloe_seg` examples.
+* **[2026.01.22]** Released [YOLOs-CPP-TensorRT](https://github.com/Geekgineer/YOLOs-CPP-TensorRT), achieving **530+ FPS** on NVIDIA GPUs and Jetson platforms.
+* **[2026.01.22]** Released [motcpp](https://github.com/Geekgineer/motcpp), a C++ implementation of popular multi-object tracking (MOT) algorithms.
+* **[2026.01.22]** Released the [ros2_yolos_cpp](https://github.com/Geekgineer/ros2_yolos_cpp) ROS 2 integration package.
+* **[2026.01.18]** Released production-ready **v1.0.0**. [Watch the demo](https://www.youtube.com/watch?v=Ax5vaYJ-mVQ).
+* **[2025.05.15]** Added image classification support.
+* **[2025.04.04]** Released [Depths-CPP](https://github.com/Geekgineer/Depths-CPP), a new project for real-time metric depth estimation.
+* **[2025.03.16]** Added pose estimation support.
+* **[2025.02.19]** Added YOLOv12 object detection support.
+* **[2025.02.11]** Added oriented bounding box (OBB) support.
+* **[2025.01.29]** Added YOLOv9 object detection support.
+* **[2025.01.26]** Added YOLOv9 segmentation support.
+* **[2025.01.26]** Added segmentation support for YOLOv8 and YOLO11, including quantized models.
+* **[2024.10.23]** Released **v0.0.1**, the initial YOLOs-CPP release with object detection support.
 
 ---
 
